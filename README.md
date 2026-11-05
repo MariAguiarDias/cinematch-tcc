@@ -45,8 +45,24 @@ O site **não** executa os algoritmos. Toda a comunicação passa pela função 
 
 | Rota | O site envia | A API responde |
 |---|---|---|
-| `recomendacoes` | `{ "avaliacoes": { "<movieId>": { "nota", "comentario", "data" } } }` | `{ "knn": [...], "svd": [...], "ncf": [...] }`, com listas de `movieId`s de `movies_small.csv`, da recomendação mais forte para a mais fraca |
-| `avaliacoes` | `{ "avaliacoes": { "knn": 4.5, "svd": 3.5, "ncf": 4 } }`, com a nota dada a cada algoritmo | Confirmação do registro |
+| `recomendacoes` | `{ "avaliacoes": { "<movieId>": { "nota", "comentario", "data" } } }`, com todas as avaliações de filmes feitas pelo participante | `{ "knn": [...], "svd": [...], "ncf": [...] }`, com listas de `movieId`s de `movies_small.csv`, da recomendação mais forte para a mais fraca |
+| `avaliacoes` | `{ "avaliacoes": { "knn": "nota", "svd": "nota", "ncf": "nota" }, "quantidade_avaliados": 'quantidade' }`, com a nota dada a cada algoritmo e o total de filmes que o participante avaliou | Confirmação do registro |
+
+Detalhes dos campos:
+
+- `nota` (em `recomendacoes`): nota de 0.5 a 5 dada ao filme. `data` segue o formato `AAAA-MM-DDTHH:MM:SS`, e `comentario` pode ser vazio.
+- `avaliacoes` (em `avaliacoes`): um objeto com as chaves `knn`, `svd` e `ncf`, cada uma com a nota numérica dada ao algoritmo. O envio só é feito com as três notas preenchidas.
+- `quantidade_avaliados` (em `avaliacoes`): número de filmes avaliados na participação (no mínimo cinco), calculado no site no momento do envio.
+
+### Comportamento da comunicação
+
+A função `comunicacaoApi(rota, dados)` trata as requisições da seguinte forma:
+
+- **Dados obrigatórios:** se `dados` for vazio ou não for informado, a função lança o erro `Avaliações inválidas. ...` e nenhuma requisição é feita.
+- **Tempo limite:** a requisição é cancelada se a API não responder em **30 segundos**.
+- **Erros:** respostas com status diferente de 2xx (como 404 ou 500), falhas de rede e o tempo limite são convertidos em um erro `Falha ao comunicar com o servidor: ...`, que preserva o erro original em `cause`.
+- **Tela de erro:** quando a chamada falha, o site mostra a mensagem "Ops! Ocorreu um erro" com o botão **Tentar novamente**. Na busca de recomendações, o botão recarrega a página e refaz a requisição. No envio das notas, ele repete apenas o envio, mantendo as notas já dadas.
+- **Limpeza dos dados locais:** as avaliações, as notas dos algoritmos e a última avaliação só são apagadas do navegador depois que a API confirma o envio das notas. Em caso de erro, nada é perdido.
 
 Requisitos para a API funcionar com o site:
 
@@ -58,7 +74,7 @@ Requisitos para a API funcionar com o site:
 - Os filmes, gêneros e notas vêm do **MovieLens** (`ml-latest-small`), em `movies_small.csv` e `ratings_small.csv`. A base vai até 2018.
 - Títulos em português, sinopses, elenco e pôsteres vêm do **TMDB**.
 - As avaliações dos filmes e as notas dos algoritmos ficam guardadas no navegador (`localStorage`) de quem usa o site, até o envio final. Elas não são compartilhadas entre pessoas, navegadores ou computadores.
-- No envio, as notas dadas aos três algoritmos são registradas pela API, e os dados locais são apagados.
+- No envio, as notas dadas aos três algoritmos e a quantidade de filmes avaliados são registradas pela API, e os dados locais são apagados.
 
 ## Estrutura
 
